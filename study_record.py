@@ -4,50 +4,60 @@ from pixela import Pixela
 from datetime import datetime
 
 
-def get_twitter_api():
-    api_key = env.get("TWITTER_API_KEY")
-    api_secret_key = env.get("TWITTER_API_SECRET_KEY")
-    access_token = env.get("TWITTER_ACCESS_TOKEN")
-    access_secret_token = env.get("TWITTER_ACCESS_SECRET_KEY")
-
+def get_twitter_api(
+        api_key,
+        api_secret_key,
+        access_token,
+        access_secret_token):
     auth = tweepy.OAuthHandler(api_key, api_secret_key)
     auth.set_access_token(access_token, access_secret_token)
     return tweepy.API(auth)
 
 
-def get_studyrecord_num(twitter, date):
-    my_id = env.get("TWITTER_MY_ID")
-    my_tweets = twitter.user_timeline(my_id)
+def get_target_str_num(twitter_api, user_id, date, target_str):
+    user_tweets = twitter_api.user_timeline(user_id)
     date_str = date.strftime("%Y%m%d")
 
-    study_record_num = 0
-    for tweet in my_tweets:
+    target_str_num = 0
+    for tweet in user_tweets:
         tweet_date = tweet.created_at.strftime("%Y%m%d")
-        if ((date_str == tweet_date) and ("勉強記録" in tweet.text)):
-            study_record_num += 1
+        if ((date_str == tweet_date) and (target_str in tweet.text)):
+            target_str_num += 1
 
-    return study_record_num
+    return target_str_num
 
 
-def creat_pixel(quantity, date):
-    pixela = Pixela(username='box16', token=env.get('PIXELA_TOKEN'))
+def create_pixel(user_name, token, graph_id, quantity, date):
+    pixela = Pixela(username=user_name, token=token)
 
     pixela.create_pixel(
-        graph_id="study-record",
+        graph_id=graph_id,
         quantity=quantity,
         date=date)
 
-    return pixela.graph_url("study-record")
-
-
-def tweet_study_record_result(twitter, study_record_num, graph_url):
-    twitter.update_status(f"本日の記録数 : {study_record_num} \n {graph_url}.html")
-
 
 if __name__ == "__main__":
+    pixela_user_name = "box16"
+    pixela_graph_id = "study-record"
+    graph_url = "https://pixe.la/v1/users/box16/graphs/study-record.html"
+    target_str = "勉強記録"
     today = datetime.today()
 
-    twitter_api = get_twitter_api()
-    study_record_num = get_studyrecord_num(twitter_api, today)
-    graph_url = creat_pixel(study_record_num, today)
-    tweet_study_record_result(twitter_api, study_record_num, graph_url)
+    twitter_api = get_twitter_api(env.get("TWITTER_API_KEY"),
+                                  env.get("TWITTER_API_SECRET_KEY"),
+                                  env.get("TWITTER_ACCESS_TOKEN"),
+                                  env.get("TWITTER_ACCESS_SECRET_KEY"))
+
+    target_str_num = get_target_str_num(twitter_api,
+                                        env.get("TWITTER_MY_ID"),
+                                        today,
+                                        target_str)
+
+    create_pixel(pixela_user_name,
+                 env.get('PIXELA_TOKEN'),
+                 pixela_graph_id,
+                 target_str_num,
+                 today)
+
+    twitter_api.update_status(
+        f"本日の記録数 : {target_str_num} \n {graph_url}")
