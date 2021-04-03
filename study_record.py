@@ -26,9 +26,6 @@ def get_studyrecord_num(twitter, date):
         if ((date_str == tweet_date) and ("勉強記録" in tweet.text)):
             study_record_num += 1
 
-    if study_record_num >= 5:
-        study_record_num = 5
-
     return study_record_num
 
 
